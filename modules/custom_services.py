@@ -22,7 +22,7 @@ async def deepgram_stt_service(frame: AudioRawFrame) -> TextFrame:
 
     return TextFrame(text=text)
 
-async def gemini_llm_service(frame: TextFrame) -> TextFrame:
+async def llama_llm_service(frame: TextFrame) -> TextFrame:
     response = ask_llama(frame.text)
     return TextFrame(text=response)
 

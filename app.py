@@ -1,33 +1,79 @@
 import streamlit as st
-from pipecat import pipeline
-from pipecat.frames.frames import AudioRawFrame
-from modules.custom_services import deepgram_stt_service, gemini_llm_service, kokoro_tts_service
+import io
 
-st.title("🎙️ Pipecat Voice Assistant")
-st.markdown("Upload your **voice** (WAV format), and this assistant will reply with **speech**, using Pipecat under the hood.")
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.processors.frame_processor import FrameProcessor
+from pipecat.processors.consumer_processor import ConsumerProcessor
 
-uploaded_audio = st.file_uploader("Upload a WAV audio file", type=["wav"])
+from pipecat.frames.frames import AudioRawFrame, TextFrame
 
-if uploaded_audio:
-    st.audio(uploaded_audio, format="audio/wav")
+from modules.stt import transcribe_audio
+from modules.llm import ask_llama
+from modules.tts import synthesize_speech
 
-    audio_bytes = uploaded_audio.read()
 
-    with st.spinner("Running Pipecat pipeline..."):
+# Step 1: Custom Producer from st.audio_input()
+class MicInputProducer(FrameProcessor):
+    def __init__(self, audio_bytes):
+        super().__init__()
+        self.audio_bytes = audio_bytes
+        self._produced = False
 
-        audio_frame = AudioRawFrame(audio=audio_bytes, sample_rate=16000, num_channels=1)
+    async def process(self, frame=None):
+        if not self._produced and self.audio_bytes:
+            self._produced = True
+            return AudioRawFrame(audio=self.audio_bytes, sample_rate=44100, num_channels=1)
+        return None
 
-        pipeline = pipeline(
-            services=[
-                deepgram_stt_service,
-                gemini_llm_service,
-                kokoro_tts_service,
-            ]
-        )
 
-        final_frame = pipeline(audio_frame)
+# Step 2: Deepgram STT as FrameProcessor
+class STTProcessor(FrameProcessor):
+    async def process(self, frame: AudioRawFrame) -> TextFrame:
+        from tempfile import NamedTemporaryFile
+        import os
 
-        final_audio = final_frame.audio
+        with NamedTemporaryFile(suffix=".wav", delete=False) as temp:
+            temp.write(frame.audio)
+            temp.flush()
+            path = temp.name
 
-    st.success("Here's your assistant's reply:")
-    st.audio(final_audio, format="audio/wav")
+        try:
+            text = transcribe_audio(path)
+        finally:
+            os.remove(path)
+
+        return TextFrame(text=text)
+
+
+# Step 3: LLM as FrameProcessor
+class LLMProcessor(FrameProcessor):
+    async def process(self, frame: TextFrame) -> TextFrame:
+        response = ask_llama(frame.text)
+        return TextFrame(text=response)
+
+
+# Step 4: Kokoro TTS as ConsumerProcessor
+class TTSProcessor(ConsumerProcessor):
+    async def consume(self, frame: TextFrame):
+        audio_bytes = synthesize_speech(frame.text)
+        st.audio(audio_bytes, format="audio/wav")
+
+
+# Streamlit UI
+st.title("🎙️ Pipecat Voice Assistant (STT + LLM + TTS)")
+
+audio_bytes = st.audio_input("Speak your query...")
+
+if audio_bytes:
+    st.write("⏳ Processing...")
+
+    # Build Pipeline
+    pipeline = Pipeline(processors=[
+        MicInputProducer(audio_bytes),
+        STTProcessor(),
+        LLMProcessor(),
+        TTSProcessor()
+    ])
+
+    import asyncio
+    asyncio.run(pipeline.run())
