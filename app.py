@@ -21,8 +21,8 @@ class MicInputProducer(FrameProcessor):
     async def process(self, frame=None):
         if not self._produced and self.audio_bytes:
             self._produced = True
-            return AudioRawFrame(audio=self.audio_bytes, sample_rate=44100, num_channels=1)
-        return None
+            audio_data = self.audio_bytes.read()
+            return AudioRawFrame(audio=audio_data, sample_rate=44100, num_channels=1)
 
 class STTProcessor(FrameProcessor):
     async def process(self, frame: AudioRawFrame) -> TextFrame:
