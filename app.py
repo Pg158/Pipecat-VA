@@ -12,8 +12,6 @@ from modules.stt import transcribe_audio
 from modules.llm import ask_llama
 from modules.tts import synthesize_speech
 
-
-# Step 1: Custom Producer from st.audio_input()
 class MicInputProducer(FrameProcessor):
     def __init__(self, audio_bytes):
         super().__init__()
@@ -26,8 +24,6 @@ class MicInputProducer(FrameProcessor):
             return AudioRawFrame(audio=self.audio_bytes, sample_rate=44100, num_channels=1)
         return None
 
-
-# Step 2: Deepgram STT as FrameProcessor
 class STTProcessor(FrameProcessor):
     async def process(self, frame: AudioRawFrame) -> TextFrame:
         from tempfile import NamedTemporaryFile
@@ -45,22 +41,16 @@ class STTProcessor(FrameProcessor):
 
         return TextFrame(text=text)
 
-
-# Step 3: LLM as FrameProcessor
 class LLMProcessor(FrameProcessor):
     async def process(self, frame: TextFrame) -> TextFrame:
         response = ask_llama(frame.text)
         return TextFrame(text=response)
 
-
-# Step 4: Kokoro TTS as ConsumerProcessor
 class TTSProcessor(ConsumerProcessor):
     async def consume(self, frame: TextFrame):
         audio_bytes = synthesize_speech(frame.text)
         st.audio(audio_bytes, format="audio/wav")
 
-
-# Streamlit UI
 st.title("🎙️ Pipecat Voice Assistant (STT + LLM + TTS)")
 
 audio_bytes = st.audio_input("Speak your query...")
@@ -68,20 +58,21 @@ audio_bytes = st.audio_input("Speak your query...")
 if audio_bytes:
     st.write("⏳ Processing...")
 
-    # Build Pipeline
-    pipeline = Pipeline(processors=[
+    processors=[
         MicInputProducer(audio_bytes),
         STTProcessor(),
         LLMProcessor(),
         TTSProcessor(producer=True)
-    ])
+    ]
+
+    pipeline=Pipeline(processors=processors)
 
     async def run_pipeline(pipeline):
-    # Start with the producer
-        input_frame = await pipeline.processors[0].process(None)
+
+        input_frame = await processors[0].process(None)
 
         current_frame = input_frame
-        for processor in pipeline.processors[1:]:
+        for processor in processors[1:]:
             if hasattr(processor, "process"):
                 current_frame = await processor.process(current_frame)
             elif hasattr(processor, "consume"):
