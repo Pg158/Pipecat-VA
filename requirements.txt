@@ -1,26 +1,18 @@
-# Core app
 streamlit
 pipecat
+sounddevice
+numpy
+scipy
+simpleaudio
 requests
 python-dotenv
-
-# Audio recording and playback
-sounddevice
-simpleaudio
-soundfile
-scipy
-numpy
-
-# Voice Activity Detection
-webrtcvad
-
-# Deepgram STT
 deepgram-sdk==4.6.0
-
-# Kokoro TTS (and dependencies)
-kokoro
+soundfile
+webrtcvad
 transformers
 torch
 torchaudio
 huggingface-hub
+git+https://github.com/hexgrad/Kokoro.git
+
 
