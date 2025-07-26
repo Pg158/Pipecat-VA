@@ -1,41 +1,33 @@
 import streamlit as st
-import simpleaudio as sa
-import tempfile
-
+from pipecat import Pipeline
 from pipecat.frames.frames import AudioRawFrame
+from modules.custom_services import deepgram_stt_service, gemini_llm_service, kokoro_tts_service
 
-
-from modules.audio import record_until_silence
-from modules.stt import transcribe_audio
-from modules.llm import ask_llama
-from modules.tts import synthesize_speech
-
-st.set_page_config(page_title="Pipecat Voice Assistant", layout="centered")
 st.title("🎙️ Pipecat Voice Assistant")
-st.markdown("Speak naturally and let Pipecat respond.")
+st.markdown("Upload your **voice** (WAV format), and this assistant will reply with **speech**, using Pipecat under the hood.")
 
-if st.button("🎤 Start Speaking"):
-    st.info("Listening... please speak clearly.")
+uploaded_audio = st.file_uploader("Upload a WAV audio file", type=["wav"])
 
-    audio_bytes = record_until_silence()
+if uploaded_audio:
+    st.audio(uploaded_audio, format="audio/wav")
 
-    input_frame = AudioRawFrame(audio=audio_bytes, sample_rate=16000, num_channels=1)
+    audio_bytes = uploaded_audio.read()
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp:
-        temp.write(audio_bytes)
-        temp_path = temp.name
+    with st.spinner("Running Pipecat pipeline..."):
 
-    text = transcribe_audio(temp_path)
-    st.markdown(f" **You said:** `{text}`")
+        audio_frame = AudioRawFrame(audio=audio_bytes, sample_rate=16000, num_channels=1)
 
-    response = ask_llama(text)
-    st.markdown(f" **Assistant:** `{response}`")
+        pipeline = Pipeline(
+            services=[
+                deepgram_stt_service,
+                gemini_llm_service,
+                kokoro_tts_service,
+            ]
+        )
 
-    audio_response_bytes = synthesize_speech(response)
+        final_frame = pipeline(audio_frame)
 
-   
-    st.audio(audio_response_bytes, format="audio/wav")
-    play_obj = sa.play_buffer(audio_response_bytes, 1, 2, 24000)
-    play_obj.wait_done()
+        final_audio = final_frame.audio
 
-    st.success("Done ")
+    st.success("Here's your assistant's reply:")
+    st.audio(final_audio, format="audio/wav")
