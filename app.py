@@ -1,5 +1,5 @@
 import streamlit as st
-from pipecat import Pipeline
+from pipecat import pipeline
 from pipecat.frames.frames import AudioRawFrame
 from modules.custom_services import deepgram_stt_service, gemini_llm_service, kokoro_tts_service
 
@@ -17,7 +17,7 @@ if uploaded_audio:
 
         audio_frame = AudioRawFrame(audio=audio_bytes, sample_rate=16000, num_channels=1)
 
-        pipeline = Pipeline(
+        pipeline = pipeline(
             services=[
                 deepgram_stt_service,
                 gemini_llm_service,
