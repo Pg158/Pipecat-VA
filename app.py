@@ -1,5 +1,6 @@
 import streamlit as st
 import io
+import asyncio
 
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.frame_processor import FrameProcessor
@@ -75,5 +76,16 @@ if audio_bytes:
         TTSProcessor(producer=True)
     ])
 
-    import asyncio
-    asyncio.run(pipeline.run())
+    async def run_pipeline(pipeline):
+    # Start with the producer
+        input_frame = await pipeline.processors[0].process(None)
+
+        current_frame = input_frame
+        for processor in pipeline.processors[1:]:
+            if hasattr(processor, "process"):
+                current_frame = await processor.process(current_frame)
+            elif hasattr(processor, "consume"):
+                await processor.consume(current_frame)
+
+    asyncio.run(run_pipeline(pipeline))
+
