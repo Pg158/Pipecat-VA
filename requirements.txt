@@ -3,7 +3,6 @@ pipecat
 sounddevice
 numpy
 scipy
-simpleaudio
 requests
 python-dotenv
 deepgram-sdk==4.6.0
