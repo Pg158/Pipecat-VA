@@ -72,7 +72,7 @@ if audio_bytes:
         MicInputProducer(audio_bytes),
         STTProcessor(),
         LLMProcessor(),
-        TTSProcessor()
+        TTSProcessor(producer=True)
     ])
 
     import asyncio
