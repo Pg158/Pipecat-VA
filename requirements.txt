@@ -1,5 +1,4 @@
 streamlit
-pipecat
 sounddevice
 numpy
 scipy
@@ -14,5 +13,6 @@ torchaudio
 huggingface-hub
 git+https://github.com/hexgrad/Kokoro.git
 git+https://github.com/hexgrad/misaki.git
+https://github.com/pipecat-ai/pipecat.git
 
 
